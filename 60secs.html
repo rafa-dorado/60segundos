@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juego 3 — Pripyat: 25 Segundos</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&family=Crimson+Text:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a090a;--warm:#1a1410;--amber:#c8a84b;--amber-d:#7a6530;--red:#c23b2e;--green:#3d7a4f;--text:#c4c0b4;--dim:#6b6860;--bright:#e8e4d4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:999}
+
+/* MAIN LAYOUT */
+.main-layout{display:flex;gap:20px;width:100%;max-width:1000px;padding:20px 16px;align-items:flex-start;flex-wrap:wrap;margin:0 auto; justify-content: center;}
+.game-area{flex:1;min-width:320px;max-width:760px;display:flex;flex-direction:column;position:relative;z-index:10;}
+.story-panel{width:100%;max-width:260px;background:#0d1010;border:1px solid #1a1d18;padding:16px;height:435px;display:flex;flex-direction:column;position:relative;z-index:10;}
+.story-title{color:var(--red);font-family:'VT323',monospace;font-size:22px;letter-spacing:2px;margin-bottom:12px;border-bottom:1px solid #1a1d18;padding-bottom:8px;text-align:center;}
+.story-content{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-right:5px;}
+.story-content::-webkit-scrollbar{width:4px;}
+.story-content::-webkit-scrollbar-thumb{background:#1a1d18;}
+.story-line{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--dim);line-height:1.5;animation:fadeIn 0.5s ease-in; border-left:2px solid var(--amber-d); padding-left:10px;}
+.story-line.alert{color:var(--bright); border-left-color:var(--red);}
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+/* SCREENS */
+.screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:500;padding:32px;text-align:center; overflow-y: auto;}
+.stitle{font-family:'VT323',monospace;font-size:clamp(40px,9vw,68px);color:var(--amber);letter-spacing:3px;line-height:1.05}
+.ssub{font-family:'Crimson Text',serif;font-size:16px;color:var(--dim);max-width:520px;line-height:1.6;text-align:left;}
+.sbtn{background:transparent;border:1px solid var(--amber);color:var(--amber);padding:10px 28px;font-family:'Share Tech Mono',monospace;font-size:13px;cursor:pointer;letter-spacing:3px;transition:background .2s; margin-top: 15px;}
+.sbtn:hover{background:rgba(200,168,75,.1)}
+.end-choices{display:flex;flex-direction:column;gap:8px;max-width:480px;width:100%}
+.end-item{display:flex;align-items:center;gap:10px;background:#0d1010;border:1px solid #252825;padding:10px 14px;font-family:'Crimson Text',serif;font-size:14px;color:var(--dim);text-align:left}
+.end-item img{width:24px;height:24px}
+.inv-preview{font-size:20px;letter-spacing:8px}
+
+/* PSYCHOLOGICAL PROFILE */
+.psycho-box{max-width:500px;background:#111413;border:1px solid var(--red);padding:16px;text-align:left;margin-top:10px;}
+.psycho-title{color:var(--red);font-family:'VT323',monospace;font-size:20px;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase;}
+.psycho-text{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text);line-height:1.6;}
+
+/* TOP BAR */
+.topbar{width:100%;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;border-bottom:1px solid #1a1d18}
+.tbleft{display:flex;flex-direction:column;gap:2px}
+.tb-title{font-family:'VT323',monospace;font-size:18px;color:var(--amber);letter-spacing:2px}
+.tb-room{font-size:11px;color:var(--dim);letter-spacing:1px}
+.tbright{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.timer{font-family:'VT323',monospace;font-size:30px;color:var(--red)}
+.timer-lbl{font-size:10px;color:var(--dim);letter-spacing:1px}
+
+/* ROOM NAV */
+.room-nav{width:100%;display:flex;gap:0;flex-shrink:0}
+.rnbtn{flex:1;background:#0d1010;border:1px solid #1a1d18;border-bottom:none;color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;padding:7px;cursor:pointer;transition:background .15s,color .15s}
+.rnbtn:hover{background:#141614;color:var(--text)}
+.rnbtn.active{background:#111413;color:var(--amber);border-color:#252825;border-bottom-color:#111413}
+
+/* ROOM */
+.room-wrap{width:100%;background:#111413;border:1px solid #1a1d18;position:relative;min-height:340px;flex-shrink:0}
+.room{width:100%;min-height:340px;position:relative;display:none;padding:20px}
+.room.active{display:block}
+.room-bg{position:absolute;inset:0;pointer-events:none;opacity:0.04}
+
+/* OBJECT */
+.obj{position:absolute;cursor:pointer;text-align:center;transition:transform .15s}
+.obj:hover .obj-icon{filter:brightness(1.8) drop-shadow(0 0 6px rgba(200,168,75,0.6))}
+.obj:hover .obj-name{color:var(--amber)}
+.obj-icon{font-size:28px;display:block;line-height:1;pointer-events:none}
+.obj.taken .obj-icon{filter:grayscale(1);opacity:0.3}
+.obj.taken{cursor:default}
+.obj-name{font-size:9px;letter-spacing:1px;color:var(--dim);white-space:nowrap;margin-top:3px;pointer-events:none}
+
+/* INVENTORY */
+.inv-bar{width:100%;background:#0d1010;border:1px solid #1a1d18;border-top:none;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.inv-lbl{font-size:10px;color:var(--dim);letter-spacing:2px;flex-shrink:0}
+.inv-slots{display:flex;gap:6px;flex:1}
+.islot{width:42px;height:42px;border:1px solid #252825;background:#111413;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:2px;position:relative;flex-shrink:0}
+.islot.filled{border-color:#3a3c30}
+.islot-tip{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--dim);white-space:nowrap;display:none}
+.islot:hover .islot-tip{display:block}
+.inv-cap{font-size:10px;color:var(--dim);flex-shrink:0}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:#111413;border:1px solid #252825;max-width:500px;width:100%;padding:24px;position:relative}
+.modal-close{position:absolute;top:10px;right:14px;background:none;border:none;color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:12px;cursor:pointer;letter-spacing:1px}
+.modal-close:hover{color:var(--amber)}
+.modal-icon{font-size:42px;margin-bottom:10px;display:block}
+.modal-title{font-size:14px;color:var(--amber);letter-spacing:2px;margin-bottom:6px;text-transform:uppercase}
+.modal-text{font-family:'Crimson Text',serif;font-size:16px;color:var(--text);line-height:1.9;margin-bottom:16px}
+.modal-mem{font-family:'Crimson Text',serif;font-size:15px;color:var(--dim);font-style:italic;border-left:2px solid var(--amber-d);padding-left:12px;margin-bottom:18px;line-height:1.8}
+.modal-actions{display:flex;gap:10px}
+.take-btn{background:transparent;border:1px solid var(--amber-d);color:var(--amber);padding:8px 18px;font-family:'Share Tech Mono',monospace;font-size:12px;cursor:pointer;letter-spacing:1px;transition:background .15s}
+.take-btn:hover{background:rgba(200,168,75,.1)}
+.take-btn:disabled{opacity:.35;cursor:default}
+.leave-btn{background:transparent;border:1px solid #252825;color:var(--dim);padding:8px 18px;font-family:'Share Tech Mono',monospace;font-size:12px;cursor:pointer;letter-spacing:1px}
+.leave-btn:hover{border-color:#3a3c30;color:var(--text)}
+</style>
+</head>
+<body>
+
+<div id="introScreen" class="screen">
+  <div style="font-family:'VT323',monospace;font-size:12px;letter-spacing:4px;color:#4a4840">ПРИПЯТЬ · 27 АПРЕЛЯ · 1986</div>
+  <div class="stitle">PRIPYAT<br>25 SEGUNDOS</div>
+  
+  <div class="ssub" style="border: 1px solid var(--red); padding: 15px; background: rgba(194, 59, 46, 0.05);">
+    <strong style="color:var(--red);">¡ATENCIÓN CAMARADAS! ORDEN DE EVACUACIÓN OFICIAL:</strong><br><br>
+    Por decisión del Consejo de Ministros de la URSS, se informa de una situación desfavorable por el accidente en la central eléctrica de Chernóbil.<br><br>
+    1. Mantengan la calma y el orden.<br>
+    2. Recojan sus documentos y pertenencias esenciales.<br>
+    3. Diríjanse a los autobuses en la entrada de su bloque.<br><br>
+    <em>La evacuación es temporal. Regresarán en un plazo de tres días.</em>
+  </div>
+
+  <div style="font-size:13px;color:#c8a84b;padding:10px 16px;letter-spacing:1px">
+    La realidad: Tienes exactamente <strong>25 segundos</strong> reales. <br>
+    El pánico empieza ahora. Toma lo que puedas en tu maleta (máx 6).<br>
+  </div>
+  <button class="sbtn" onclick="startGame()">ENTRAR AL APARTAMENTO →</button>
+</div>
+
+<div id="endScreen" class="screen" style="display:none">
+  <div class="stitle" style="font-size:38px">EL AUTOBÚS ESPERA</div>
+  <div class="ssub" style="text-align: center;">Nunca volviste a este apartamento.<br>Esto fue lo que te llevaste:</div>
+  <div class="inv-preview" id="endInv"></div>
+  <div class="end-choices" id="endItems"></div>
+  
+  <div class="psycho-box" id="psychoBox">
+    <div class="psycho-title" id="psychoTitle">PERFIL PSICOLÓGICO</div>
+    <div class="psycho-text" id="psychoText"></div>
+  </div>
+
+  <button class="sbtn" onclick="restartGame()" style="margin-top:4px">↺ VOLVER A EMPEZAR</button>
+</div>
+
+<div class="main-layout" id="mainLayout" style="display:none;">
+  
+  <div class="game-area">
+    <div class="topbar">
+      <div class="tbleft">
+        <div class="tb-title">БЛОК № 6 · АПТ. 23 · ПРИПЯТЬ</div>
+        <div class="tb-room" id="roomLbl">Salón principal</div>
+      </div>
+      <div class="tbright">
+        <div class="timer" id="timerDisp">00:25</div>
+        <div class="timer-lbl">TIEMPO RESTANTE</div>
+      </div>
+    </div>
+
+    <div class="room-nav">
+      <button class="rnbtn active" id="rn0" onclick="switchRoom(0)">SALÓN</button>
+      <button class="rnbtn" id="rn1" onclick="switchRoom(1)">DORMITORIO</button>
+      <button class="rnbtn" id="rn2" onclick="switchRoom(2)">COCINA</button>
+    </div>
+
+    <div class="room-wrap">
+      <div class="room active" id="room0">
+        <div class="room-bg" style="background:linear-gradient(135deg,#c8a84b 0%,transparent 60%)"></div>
+      </div>
+      <div class="room" id="room1">
+        <div class="room-bg" style="background:linear-gradient(135deg,#3a6a8a 0%,transparent 60%)"></div>
+      </div>
+      <div class="room" id="room2">
+        <div class="room-bg" style="background:linear-gradient(135deg,#6a4a2a 0%,transparent 60%)"></div>
+      </div>
+    </div>
+
+    <div class="inv-bar">
+      <div class="inv-lbl">MALETA:</div>
+      <div class="inv-slots" id="invSlots"></div>
+      <div class="inv-cap" id="invCap">0/6</div>
+    </div>
+  </div>
+
+  <div class="story-panel">
+    <div class="story-title">INFORME CLASIFICADO</div>
+    <div class="story-content" id="storyContent">
+      </div>
+  </div>
+
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">[ CERRAR ]</button>
+    <span class="modal-icon" id="mIcon"></span>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-text" id="mText"></div>
+    <div class="modal-mem" id="mMem"></div>
+    <div class="modal-actions">
+      <button class="take-btn" id="takeBtn" onclick="takeItem()">+ METER EN MALETA</button>
+      <button class="leave-btn" onclick="closeModal()">DEJAR AQUÍ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROOMS=[
+  {
+    name:'Salón principal',
+    objects:[
+      {id:'foto',icon:'🖼️',name:'Foto familiar',x:12,y:18,text:'Una fotografía enmarcada de la familia completa en el parque de atracciones de Pripyat.',mem:'"El parque iba a inaugurarse el 1 de mayo. Nunca llegó a abrir."',type:'personal'},
+      {id:'radio',icon:'📻',name:'Radio',x:38,y:22,text:'Radio portátil soviética. Esta mañana dio la noticia de un "incidente técnico".',mem:'"Nos dijeron que no era grave. Que todo estaba bajo control."',type:'practica'},
+      {id:'libro',icon:'📚',name:'Libro de poemas',x:65,y:15,text:'Colección de poemas de Anna Ajmátova, con anotaciones en los márgenes.',mem:'"Nunca imaginé que los poemas sobre exilio serían tan literales."',type:'personal'},
+      {id:'ajedrez',icon:'♟️',name:'Juego de ajedrez',x:22,y:58,text:'Tablero de madera tallado a mano. Un regalo de tu padre.',mem:'"Prometí ganarle algún día. No llegué a hacerlo."',type:'personal'},
+      {id:'violo',icon:'🎻',name:'Violín',x:75,y:50,text:'El violín de tu hija. El próximo recital era en junio.',mem:'"Ayer me quejé del ruido que hacía al ensayar. Daría lo que fuera por oírla ahora."',type:'personal'}
+    ]
+  },
+  {
+    name:'Dormitorio',
+    objects:[
+      {id:'album',icon:'📷',name:'Álbum de fotos',x:18,y:20,text:'Un álbum que documenta veinte años de existencia de tu familia.',mem:'"Están todos aquí: los que ya no están y los que todavía están."',type:'personal'},
+      {id:'osito',icon:'🧸',name:'Oso de peluche',x:55,y:25,text:'Oso de tu hija. Hoy salió al colegio olvidándolo en casa.',mem:'"Lloró diez minutos. Fui a buscarlo. Está aquí, en su cama."',type:'personal'},
+      {id:'pasaporte',icon:'📑',name:'Documentos',x:30,y:60,text:'Toda la existencia oficial y burocrática de tu familia en la URSS.',mem:'"Sin papeles no eres nadie. Con ellos, quizás puedas reconstruir algo."',type:'practica'},
+      {id:'medicina',icon:'💊',name:'Medicamentos',x:70,y:55,text:'Botiquín de primeros auxilios y medicación para la tensión.',mem:'"Nunca nos dieron pastillas de yodo. Dijeron que no hacía falta."',type:'practica'},
+      {id:'boda',icon:'💍',name:'Anillos de boda',x:50,y:70,text:'Tu anillo de boda y el de tu pareja, que ahora está de guardia en la planta.',mem:'"Me dijo que volvería para la cena. Confío en que así sea."',type:'personal'}
+    ]
+  },
+  {
+    name:'Cocina',
+    objects:[
+      {id:'pan',icon:'🍞',name:'Pan del desayuno',x:20,y:30,text:'Una hogaza de pan negro a medio terminar.',mem:'"El café todavía estaba caliente. Pensábamos volver a los tres días."',type:'nada'},
+      {id:'carta',icon:'✉️',name:'Carta sin enviar',x:55,y:20,text:'Carta a tu madre en Kiev contándole lo bonito que es el verano en Pripyat.',mem:'"Esta iba a ser la última carta desde aquí."',type:'personal'},
+      {id:'dinero',icon:'💵',name:'Ahorros',x:40,y:62,text:'Un sobre con 340 rublos: los ahorros familiares de tres meses.',mem:'"Estábamos ahorrando para un Lada. Ahora no sé para qué sirve el dinero."',type:'practica'},
+      {id:'planta',icon:'🪴',name:'Geranio',x:75,y:18,text:'Un geranio que ha florecido por primera vez. Nadie lo regará.',mem:'"Siempre decía que era difícil hacer florecer un geranio en Ucrania."',type:'nada'},
+      {id:'juguete',icon:'🚂',name:'Tren de juguete',x:15,y:68,text:'Tren de hojalata que perteneció a su abuelo.',mem:'"Estaba escondido en un cajón. Ella lo encontró esta misma mañana."',type:'personal'}
+    ]
+  }
+];
+
+const STORY_FRAGMENTS = [
+  { time: 24, text: "¿Por qué ocurrió? Arrogancia y negligencia. Un reactor RBMK con graves fallos de diseño y una prueba de seguridad llevada al límite provocaron la explosión del núcleo.", alert: true },
+  { time: 19, text: "Toneladas de uranio y grafito en llamas fueron escupidas al cielo. Los bomberos acudieron al infierno sin protección, sacrificándose para que el fuego no consumiera a toda Europa." },
+  { time: 14, text: "Mientras la radiación rasgaba el ADN de los presentes, el Estado calló. Pripyat despertó con sabor a metal en la boca, pero los niños salieron a jugar bajo cenizas tóxicas." },
+  { time: 8, text: "Las consecuencias serán irreparables. Miles de liquidadores sufrirán muertes agónicas y una epidemia de cáncer asolará la región. Un ecosistema entero quedará envenenado.", alert: true },
+  { time: 3, text: "Miras el reloj. Te prometen que son solo tres días, pero la ciudad será inhabitable por 20.000 años. El autobús arranca. Estás perdiendo tu vida para siempre." }
+];
+
+const INV_MAX=6;
+let inventory=[], modalItem=null, timerInterval, totalSecs=25, gameActive=false;
+
+function buildRooms(){
+  ROOMS.forEach((room,ri)=>{
+    const roomEl=document.getElementById('room'+ri);
+    room.objects.forEach(obj=>{
+      const el=document.createElement('div');
+      el.className='obj'; el.id='obj_'+obj.id;
+      el.style.left=obj.x+'%'; el.style.top=obj.y+'%';
+      el.innerHTML=`<span class="obj-icon">${obj.icon}</span><div class="obj-name">${obj.name}</div>`;
+      el.onclick=()=>openModal(obj);
+      roomEl.appendChild(el);
+    });
+  });
+  renderInventory();
+}
+
+function switchRoom(idx){
+  document.querySelectorAll('.room').forEach((r,i)=>r.classList.toggle('active',i===idx));
+  document.querySelectorAll('.rnbtn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  document.getElementById('roomLbl').textContent=ROOMS[idx].name;
+}
+
+function openModal(obj){
+  if(!gameActive) return;
+  const el=document.getElementById('obj_'+obj.id);
+  if(el.classList.contains('taken'))return;
+  modalItem=obj;
+  document.getElementById('mIcon').textContent=obj.icon;
+  document.getElementById('mTitle').textContent=obj.name;
+  document.getElementById('mText').textContent=obj.text;
+  document.getElementById('mMem').textContent=obj.mem;
+  const tb=document.getElementById('takeBtn');
+  tb.disabled=inventory.length>=INV_MAX;
+  tb.textContent=inventory.length>=INV_MAX?'MALETA LLENA':'+ METER EN MALETA';
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal(e){
+  if(e&&e.target!==document.getElementById('modalBg'))return;
+  document.getElementById('modalBg').classList.remove('show');
+  modalItem=null;
+}
+
+function takeItem(){
+  if(!modalItem||inventory.length>=INV_MAX)return;
+  inventory.push(modalItem);
+  document.getElementById('obj_'+modalItem.id).classList.add('taken');
+  renderInventory();
+  document.getElementById('modalBg').classList.remove('show');
+  modalItem=null;
+  if(inventory.length>=INV_MAX){
+    document.getElementById('takeBtn').disabled=true;
+  }
+}
+
+function renderInventory(){
+  const sl=document.getElementById('invSlots'); sl.innerHTML='';
+  for(let i=0;i<INV_MAX;i++){
+    const s=document.createElement('div');
+    s.className='islot'+(i<inventory.length?' filled':'');
+    if(i<inventory.length){
+      s.textContent=inventory[i].icon;
+      const tip=document.createElement('div');
+      tip.className='islot-tip'; tip.textContent=inventory[i].name;
+      s.appendChild(tip);
+    }
+    sl.appendChild(s);
+  }
+  document.getElementById('invCap').textContent=`${inventory.length}/${INV_MAX}`;
+}
+
+function tickTimer(){
+  if(!gameActive) return;
+  
+  // Inject Story Context based on time
+  const frag = STORY_FRAGMENTS.find(f => f.time === totalSecs);
+  if(frag){
+    const sc = document.getElementById('storyContent');
+    const p = document.createElement('div');
+    p.className = 'story-line' + (frag.alert ? ' alert' : '');
+    p.textContent = frag.text;
+    sc.appendChild(p);
+    sc.scrollTop = sc.scrollHeight; // Auto-scroll down
+  }
+
+  totalSecs--;
+
+  if(totalSecs<=0){
+    clearInterval(timerInterval);
+    showEnd();
+    return;
+  }
+  const m=Math.floor(totalSecs/60);
+  const s=totalSecs%60;
+  document.getElementById('timerDisp').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  
+  if(totalSecs<=5) document.getElementById('timerDisp').style.color='#c23b2e';
+  else if(totalSecs<=10) document.getElementById('timerDisp').style.color='#c8a84b';
+}
+
+function showEnd(){
+  gameActive=false;
+  clearInterval(timerInterval);
+  document.getElementById('timerDisp').textContent='00:00';
+  document.getElementById('modalBg').classList.remove('show');
+  document.getElementById('mainLayout').style.display='none';
+  
+  const es=document.getElementById('endScreen');
+  es.style.display='flex';
+  document.getElementById('endInv').textContent=inventory.map(i=>i.icon).join(' ')||'(maleta vacía)';
+  
+  const itemsEl=document.getElementById('endItems'); itemsEl.innerHTML='';
+  if(inventory.length===0){
+    const d=document.createElement('div'); d.className='end-item';
+    d.textContent='No te llevaste nada. Saliste en estado de shock con las manos vacías.'; 
+    itemsEl.appendChild(d);
+  } else {
+    inventory.forEach(item=>{
+      const d=document.createElement('div'); d.className='end-item';
+      d.innerHTML=`<span style="font-size:20px">${item.icon}</span> <span>${item.name}</span>`;
+      itemsEl.appendChild(d);
+    });
+  }
+
+  // Psychological Test Logic
+  const personal = inventory.filter(i=>i.type==='personal').length;
+  const practica = inventory.filter(i=>i.type==='practica').length;
+  const nada = inventory.filter(i=>i.type==='nada').length;
+
+  let pTitle = "";
+  let pText = "";
+
+  if(inventory.length === 0){
+    pTitle = "ESTADO: PARÁLISIS POR PÁNICO EXTREMO";
+    pText = "Con solo 25 segundos, el cerebro reptiliano tomó el control total. La ansiedad te paralizó. Te marchaste de tu hogar sin recuerdos y sin herramientas de supervivencia. Vas al vacío dejando tu vida intacta atrás, víctima absoluta de la urgencia.";
+  } else if(nada >= 2 || (nada > personal && nada > practica)){
+    pTitle = "ESTADO: CAOS COGNITIVO";
+    pText = "La falta de tiempo te llevó a agarrar lo primero que viste, sin importar su utilidad (como pan a medio comer o una maceta). Psicológicamente, tu mente colapsó bajo el estrés límite de 25 segundos y falló en jerarquizar prioridades, reflejando pura desorientación traumática.";
+  } else if(practica > personal){
+    pTitle = "ESTADO: INSTINTO DE SUPERVIVENCIA CORTICAL";
+    pText = "Incluso con solo 25 segundos, tu mente logró suprimir la emoción de forma tajante. Calculaste que el dinero y las medicinas valían más que las fotos familiares. Bajo presión letal, descartas la nostalgia para priorizar la preservación física. Frío, rápido e hiperpragmático.";
+  } else if(personal > practica){
+    pTitle = "ESTADO: RESCATE IDENTITARIO";
+    pText = "Ante el estrés de perderlo todo en 25 segundos, tu instinto no fue salvar tu cuerpo, sino tu identidad. Te lanzaste a agarrar los objetos emocionales, asumiendo un riesgo físico al ignorar lo útil. Tu vínculo afectivo es la fuerza dominante de tu psique, incluso en el apocalipsis.";
+  } else {
+    pTitle = "ESTADO: SINCRONIZACIÓN BAJO FUEGO";
+    pText = "Con 25 segundos en el reloj, lograste dividir tu atención magistralmente. Agarraste tanto suministros para sobrevivir como recuerdos para saber por qué vale la pena hacerlo. Es el perfil psicológico más raro bajo estrés extremo: un puente perfecto entre la lógica y la emoción.";
+  }
+
+  document.getElementById('psychoTitle').textContent = pTitle;
+  document.getElementById('psychoText').textContent = pText;
+}
+
+function startGame(){
+  document.getElementById('introScreen').style.display='none';
+  document.getElementById('mainLayout').style.display='flex';
+  document.getElementById('storyContent').innerHTML = ''; // Limpiar historia
+  
+  buildRooms();
+  gameActive=true;
+  
+  totalSecs=25;
+  document.getElementById('timerDisp').textContent='00:25';
+  document.getElementById('timerDisp').style.color='#e8e4d4';
+  
+  clearInterval(timerInterval);
+  timerInterval=setInterval(tickTimer, 1000);
+}
+
+function restartGame(){
+  inventory=[];
+  modalItem=null;
+  clearInterval(timerInterval);
+  
+  ROOMS.forEach((r,ri)=>{
+    r.objects.forEach(obj=>{
+      const el=document.getElementById('obj_'+obj.id);
+      if(el)el.remove();
+    });
+  });
+  
+  document.getElementById('endScreen').style.display='none';
+  switchRoom(0);
+  startGame();
+}
+</script>
+</body>
+</html>
